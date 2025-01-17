@@ -1,0 +1,626 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+    xml:base="http://example.org/flood"
+    xmlns="http://example.org/flood#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+    xmlns:time="http://www.w3.org/2006/time#"
+    xmlns:sh="http://www.w3.org/ns/shacl#"
+    xmlns:ex="http://example.org/flood#">
+
+  <!-- 
+      ONTOLOGY DECLARATION
+  -->
+  <owl:Ontology rdf:about="http://example.org/flood">
+    <rdfs:comment>Comprehensive Flood Ontology extended with time-based properties, SHACL rules, hazard maps, and an Indicator class for spectral/remote-sensing data.</rdfs:comment>
+  </owl:Ontology>
+
+
+  <!-- 
+      CORE / TOP-LEVEL CLASSES
+  -->
+  <owl:Class rdf:about="http://example.org/flood#FloodEvent">
+    <rdfs:comment>Represents a specific occurrence of flooding, tying together causes, factors, and flood types in time and space.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#FloodType">
+    <rdfs:comment>Categorizes a FloodEvent into subtypes such as RiverFlood, CoastalFlood, InlandFlood, or FlashFlood.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#FloodCause">
+    <rdfs:comment>Denotes a direct phenomenon or trigger leading to a flood (e.g., HeavyRainfall, DamFailure, IceJam).</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#FloodFactor">
+    <rdfs:comment>Represents background or concurrent conditions that can influence flood severity or likelihood (e.g., steep slope, soil condition).</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#Forecasting">
+    <rdfs:comment>Captures the overarching forecasting process, including models, data streams, and organizational roles.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#ForecastModel">
+    <rdfs:comment>A hydrologic or AI-driven model used to predict FloodEvents from multi-source data (rainfall, soil moisture, etc.).</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#Hydrologist">
+    <rdfs:comment>A domain expert who monitors flood-related variables (e.g., snowpack, water levels) and updates forecasting workflows.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#RiverForecastCenter">
+    <rdfs:comment>An organization or system that aggregates hydrologic data, runs ForecastModels, and issues advisories or warnings.</rdfs:comment>
+  </owl:Class>
+
+
+  <!-- 
+      EXTENDED CLASSES: WARNINGS, SEVERITIES, AREAS AT RISK
+  -->
+  <owl:Class rdf:about="http://example.org/flood#FlashFloodWarning">
+    <rdfs:comment>Captures different short-fused warning levels for flash floods (Base, Considerable, Catastrophic).</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#BaseWarning">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FlashFloodWarning"/>
+    <rdfs:comment>Common flash flood warning indicating possible flash flood impacts.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#ConsiderableWarning">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FlashFloodWarning"/>
+    <rdfs:comment>Indicates unusual severity or imminent flash flood impact requiring urgent action.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#CatastrophicWarning">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FlashFloodWarning"/>
+    <rdfs:comment>Extremely rare scenario with life-threatening or catastrophic flash flood conditions.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#RiverFloodSeverity">
+    <rdfs:comment>Represents severity categories once a river surpasses flood stage (Minor, Moderate, Major).</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#MinorFlooding">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#RiverFloodSeverity"/>
+    <rdfs:comment>Minimal or no property damage, but some public inconvenience or threat.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#ModerateFlooding">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#RiverFloodSeverity"/>
+    <rdfs:comment>Inundation of structures/roads; possible evacuations may be needed.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#MajorFlooding">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#RiverFloodSeverity"/>
+    <rdfs:comment>Extensive inundation requiring significant evacuations and property relocations.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#AtRiskArea">
+    <rdfs:comment>Locations particularly prone to flooding (urban areas, low spots, mountainous regions, etc.).</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#UrbanArea">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#AtRiskArea"/>
+    <rdfs:comment>Highly developed region with buildings, highways, and parking lots that increase runoff potential.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#LowSpot">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#AtRiskArea"/>
+    <rdfs:comment>Depressed or underground places (e.g., basements, underpasses) prone to quick inundation.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#MountainSteepHills">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#AtRiskArea"/>
+    <rdfs:comment>Areas of high elevation or steep slopes leading to rapid runoff during heavy rainfall.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#AreaNearRiver">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#AtRiskArea"/>
+    <rdfs:comment>Regions adjacent to riverbanks or levees susceptible to overflow or levee failure.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#DownstreamOfDam">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#AtRiskArea"/>
+    <rdfs:comment>Locations immediately downstream of a dam, vulnerable to destructive surges if the dam fails.</rdfs:comment>
+  </owl:Class>
+
+  <!-- We reuse BurnArea as both AtRiskArea and FloodFactor -->
+  <owl:Class rdf:about="http://example.org/flood#BurnArea">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#AtRiskArea"/>
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodFactor"/>
+    <rdfs:comment>Recently burned land with vegetation loss, increasing runoff and debris flow risk.</rdfs:comment>
+  </owl:Class>
+
+
+  <!-- 
+      FLOOD TYPES: SUBCLASSES OF FloodType
+  -->
+  <owl:Class rdf:about="http://example.org/flood#RiverFlood">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodType"/>
+    <rdfs:comment>Occurs when river water overflows its banks or levees, inundating adjacent areas.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#CoastalFlood">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodType"/>
+    <rdfs:comment>Affects coastal regions, often associated with storm surge, high tide, or tropical systems.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#InlandFlood">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodType"/>
+    <rdfs:comment>Flooding not influenced by coastal tides; typically triggered by prolonged or intense rainfall inland.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#FlashFlood">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodType"/>
+    <rdfs:comment>Rapidly developing flood within hours of heavy rain, dam breaks, or other sudden water releases.</rdfs:comment>
+  </owl:Class>
+
+  <!-- 
+      FLOOD CAUSES: SUBCLASSES OF FloodCause
+  -->
+  <owl:Class rdf:about="http://example.org/flood#HeavyRainfall">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodCause"/>
+    <rdfs:comment>Excessive precipitation over a short period, a common cause of flash or river floods.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#LongPeriodOfRain">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodCause"/>
+    <rdfs:comment>Prolonged rainfall saturating soil and raising water levels over days or weeks.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#Snowmelt">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodCause"/>
+    <rdfs:comment>Rapid melting of snowpack leading to excess runoff in rivers and streams.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#StormSurge">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodCause"/>
+    <rdfs:comment>Abnormal rise in sea level due to severe storms (hurricanes, cyclones), causing coastal flooding.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#IceJam">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodCause"/>
+    <rdfs:comment>Broken ice pieces blocking river flow, causing water backup or sudden downstream flooding when released.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#DamFailure">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodCause"/>
+    <rdfs:comment>Structural failure of a dam, releasing large volumes of water suddenly downstream.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#LeveeFailure">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodCause"/>
+    <rdfs:comment>Collapse or breach of a levee, allowing floodwaters to inundate protected lands.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#StormMovement">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodCause"/>
+    <rdfs:comment>Meteorological factor describing the speed or path of a storm system.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#RainfallRate">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodCause"/>
+    <rdfs:comment>Intensity of precipitation (e.g., mm/hr), crucial for flash flood potential.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#StormRedevelopment">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodCause"/>
+    <rdfs:comment>Repeated development of storms over the same area (training echoes), leading to cumulative rainfall.</rdfs:comment>
+  </owl:Class>
+
+
+  <!-- 
+      FLOOD FACTORS: SUBCLASSES OF FloodFactor
+  -->
+  <owl:Class rdf:about="http://example.org/flood#SoilCondition">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodFactor"/>
+    <rdfs:comment>Represents soil infiltration or saturation characteristics (compacted, wet, etc.).</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#CompactedSoil">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#SoilCondition"/>
+    <rdfs:comment>Soil compressed by machinery/traffic, reducing infiltration and raising runoff potential.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#VeryWetSoil">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#SoilCondition"/>
+    <rdfs:comment>Highly saturated soil that cannot absorb additional water easily.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#ImpermeableRock">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#SoilCondition"/>
+    <rdfs:comment>Geological substrate preventing water infiltration, leading to high runoff.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#SteepSlope">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodFactor"/>
+    <rdfs:comment>Terrain feature causing water to flow rapidly downhill, increasing flood velocity.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#ImperviousSurface">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodFactor"/>
+    <rdfs:comment>Human-made surfaces (pavement, concrete) that prevent water infiltration.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#StormDrainPresence">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodFactor"/>
+    <rdfs:comment>Urban drainage infrastructure that may help or fail to mitigate flooding.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#SnowpackDepth">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#FloodFactor"/>
+    <rdfs:comment>Represents the amount/condition of snow that can melt and exacerbate flood risks.</rdfs:comment>
+  </owl:Class>
+
+
+  <!-- 
+      INFRASTRUCTURE CLASSES (OPTIONAL)
+  -->
+  <owl:Class rdf:about="http://example.org/flood#ProtectiveStructure">
+    <rdfs:comment>A structure designed to control or mitigate floods, e.g., a dam or levee.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#Dam">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#ProtectiveStructure"/>
+    <rdfs:comment>A barrier to store water; its failure can unleash destructive floods downstream.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#Levee">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#ProtectiveStructure"/>
+    <rdfs:comment>An embankment built along rivers to prevent overflow; levee failure can cause severe flooding.</rdfs:comment>
+  </owl:Class>
+
+
+  <!-- 
+      NEW: INDICATORS / SPECTRAL SIGNATURES
+  -->
+  <owl:Class rdf:about="http://example.org/flood#Indicator">
+    <rdfs:comment>A generic representation of derived observations (e.g., spectral indices, sensor-based cues) that indirectly signal a FloodCause or FloodFactor.</rdfs:comment>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://example.org/flood#SpectralIndex">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#Indicator"/>
+    <rdfs:comment>A specialized Indicator representing remote-sensing indices (e.g., NDVI, NDWI) computed from satellite images.</rdfs:comment>
+  </owl:Class>
+
+  <owl:ObjectProperty rdf:about="http://example.org/flood#isIndicatorOf">
+    <rdfs:domain rdf:resource="http://example.org/flood#Indicator"/>
+    <rdfs:range>
+      <owl:Class>
+        <owl:unionOf rdf:parseType="Collection">
+          <rdf:Description rdf:about="http://example.org/flood#FloodFactor"/>
+          <rdf:Description rdf:about="http://example.org/flood#FloodCause"/>
+        </owl:unionOf>
+      </owl:Class>
+    </rdfs:range>
+    <rdfs:comment>Links an Indicator (e.g., NDWI) to a FloodFactor or FloodCause that it suggests or helps identify.</rdfs:comment>
+  </owl:ObjectProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#indicatorValue">
+    <rdfs:domain rdf:resource="http://example.org/flood#Indicator"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+    <rdfs:comment>Numeric value of the indicator (e.g., NDWI = 0.35, NDVI = 0.65, etc.).</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#computedFromBands">
+    <rdfs:domain rdf:resource="http://example.org/flood#SpectralIndex"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+    <rdfs:comment>Specifies which spectral bands or band combinations were used to compute the SpectralIndex.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#computationDate">
+    <rdfs:domain rdf:resource="http://example.org/flood#Indicator"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+    <rdfs:comment>Timestamp or date when the indicator was derived, e.g., from a satellite image.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#confidenceLevel">
+    <rdfs:domain rdf:resource="http://example.org/flood#Indicator"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+    <rdfs:comment>Optional measure of uncertainty or confidence (0-1, or 0-100%) in the computed indicator.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+
+  <!-- 
+      OBJECT PROPERTIES
+  -->
+  <owl:ObjectProperty rdf:about="http://example.org/flood#floodType">
+    <rdfs:domain rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdfs:range rdf:resource="http://example.org/flood#FloodType"/>
+    <rdfs:comment>Links a FloodEvent to its FloodType (RiverFlood, FlashFlood, etc.).</rdfs:comment>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="http://example.org/flood#hasCause">
+    <rdfs:domain rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdfs:range rdf:resource="http://example.org/flood#FloodCause"/>
+    <rdfs:comment>Indicates which phenomenon directly triggered a given FloodEvent (e.g., heavy rainfall, dam failure).</rdfs:comment>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="http://example.org/flood#hasFactor">
+    <rdfs:domain rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdfs:range rdf:resource="http://example.org/flood#FloodFactor"/>
+    <rdfs:comment>Shows which environmental or infrastructural factors influenced the flood's severity or likelihood.</rdfs:comment>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="http://example.org/flood#usesForecastModel">
+    <rdfs:domain rdf:resource="http://example.org/flood#Forecasting"/>
+    <rdfs:range rdf:resource="http://example.org/flood#ForecastModel"/>
+    <rdfs:comment>Specifies that a forecasting entity (e.g., a RiverForecastCenter) uses a particular model to predict floods.</rdfs:comment>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="http://example.org/flood#monitors">
+    <rdfs:domain rdf:resource="http://example.org/flood#Hydrologist"/>
+    <rdfs:range rdf:resource="http://example.org/flood#FloodFactor"/>
+    <rdfs:comment>States that a Hydrologist observes or keeps track of certain flood factors (snowpack, soil conditions, etc.).</rdfs:comment>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="http://example.org/flood#predicts">
+    <rdfs:domain rdf:resource="http://example.org/flood#ForecastModel"/>
+    <rdfs:range rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdfs:comment>Indicates that a given ForecastModel can forecast or project a potential FloodEvent.</rdfs:comment>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="http://example.org/flood#hasFlashFloodWarning">
+    <rdfs:domain rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdfs:range rdf:resource="http://example.org/flood#FlashFloodWarning"/>
+    <rdfs:comment>Connects a FloodEvent (usually a FlashFlood) with a short-fused warning level (Base, Considerable, Catastrophic).</rdfs:comment>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="http://example.org/flood#hasRiverFloodSeverity">
+    <rdfs:domain rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdfs:range rdf:resource="http://example.org/flood#RiverFloodSeverity"/>
+    <rdfs:comment>Connects a FloodEvent typed as a RiverFlood to a severity category (Minor, Moderate, Major).</rdfs:comment>
+  </owl:ObjectProperty>
+
+  <owl:ObjectProperty rdf:about="http://example.org/flood#isAtRiskFrom">
+    <rdfs:domain rdf:resource="http://example.org/flood#AtRiskArea"/>
+    <rdfs:range rdf:resource="http://example.org/flood#FloodType"/>
+    <rdfs:comment>Specifies that a location (AtRiskArea) is vulnerable to a particular FloodType or specific FloodEvent.</rdfs:comment>
+  </owl:ObjectProperty>
+
+
+  <!-- 
+      TIME-BASED PROPERTIES & OWL-Time
+  -->
+  <owl:ObjectProperty rdf:about="http://example.org/flood#hasTimeInterval">
+    <rdfs:domain rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2006/time#Interval"/>
+    <rdfs:comment>Links a FloodEvent to a time:Interval representing the start/end span of flooding.</rdfs:comment>
+  </owl:ObjectProperty>
+
+
+  <!-- 
+      DATA PROPERTIES FOR TIME / DURATIONS
+  -->
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#timeToPeakFlowPredicted">
+    <rdfs:domain rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#duration"/>
+    <rdfs:comment>Estimated time (duration) before flood's peak flow, as predicted by the model.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#timeToPeakFlowObserved">
+    <rdfs:domain rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#duration"/>
+    <rdfs:comment>Observed time (duration) measured from flood onset to its actual peak flow.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#timeToFloodWarningPredicted">
+    <rdfs:domain rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#duration"/>
+    <rdfs:comment>Model-based prediction of the lead time before a flood warning is officially issued.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#timeToFloodWarningObserved">
+    <rdfs:domain rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#duration"/>
+    <rdfs:comment>Actual measured time from flood onset until a flood warning was declared.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#timeLagPredicted">
+    <rdfs:domain rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#duration"/>
+    <rdfs:comment>Predicted difference (duration) between peak rainfall and the beginning of flood conditions.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#timeLagObserved">
+    <rdfs:domain rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#duration"/>
+    <rdfs:comment>Observed difference (duration) between peak rainfall and the actual onset of flooding.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+
+  <!-- 
+      DATA PROPERTIES FOR MEASUREMENTS / NUMERIC VALUES
+  -->
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#precipitationAmount">
+    <rdfs:domain rdf:resource="http://example.org/flood#HeavyRainfall"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+    <rdfs:comment>Total precipitation measured for a heavy rainfall event, typically in millimeters or inches.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#rainfallRateValue">
+    <rdfs:domain rdf:resource="http://example.org/flood#RainfallRate"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+    <rdfs:comment>Rate of rainfall intensity (mm/hour, etc.), crucial for flash flood potential.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#soilMoistureLevel">
+    <rdfs:domain rdf:resource="http://example.org/flood#SoilCondition"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+    <rdfs:comment>Represents the percentage or fraction of water saturation in the soil.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#slopeDegree">
+    <rdfs:domain rdf:resource="http://example.org/flood#SteepSlope"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+    <rdfs:comment>Angle or gradient of a slope (in degrees), indicating steepness of terrain.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#snowpackDepthValue">
+    <rdfs:domain rdf:resource="http://example.org/flood#Snowmelt"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+    <rdfs:comment>Snow-water equivalent or depth in millimeters or centimeters for snowpack.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#stormSpeed">
+    <rdfs:domain rdf:resource="http://example.org/flood#StormMovement"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+    <rdfs:comment>Speed (km/h, mph) at which a storm system is traveling.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#imperviousSurfaceRatio">
+    <rdfs:domain rdf:resource="http://example.org/flood#ImperviousSurface"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#float"/>
+    <rdfs:comment>Fraction (0–1) indicating how much of an area is covered by impervious materials.</rdfs:comment>
+  </owl:DatatypeProperty>
+
+
+  <!-- 
+      HAZARD MAPPING INTEGRATION (REFERENCING EXTERNAL GIS)
+  -->
+  <owl:Class rdf:about="http://example.org/flood#HazardMap">
+    <rdfs:comment>Represents a GIS layer or resource (WMS, shapefile, etc.) indicating flood hazard boundaries or risk zones.</rdfs:comment>
+  </owl:Class>
+
+  <owl:ObjectProperty rdf:about="http://example.org/flood#hasHazardMap">
+    <rdfs:domain rdf:resource="http://example.org/flood#AtRiskArea"/>
+    <rdfs:range rdf:resource="http://example.org/flood#HazardMap"/>
+    <rdfs:comment>Links an AtRiskArea to a HazardMap showing potential flood extents or risk levels.</rdfs:comment>
+  </owl:ObjectProperty>
+
+  <owl:DatatypeProperty rdf:about="http://example.org/flood#dataSource">
+    <rdfs:domain rdf:resource="http://example.org/flood#HazardMap"/>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#anyURI"/>
+    <rdfs:comment>Stores the URI or file path for the external GIS resource (e.g., WMS endpoint or shapefile URL).</rdfs:comment>
+  </owl:DatatypeProperty>
+
+
+  <!-- 
+      SHACL RULE: HIGH FLASH FLOOD RISK
+  -->
+  <owl:Class rdf:about="http://example.org/flood#HighFlashFloodRiskArea">
+    <rdfs:subClassOf rdf:resource="http://example.org/flood#AtRiskArea"/>
+    <rdfs:comment>Automatically inferred when an AtRiskArea has both SteepSlope and BurnArea factors.</rdfs:comment>
+  </owl:Class>
+
+  <sh:NodeShape rdf:about="http://example.org/flood#HighFlashFloodRiskShape">
+    <rdfs:comment>Defines SHACL rule: if an area hasFactor SteepSlope and BurnArea, classify it as HighFlashFloodRiskArea.</rdfs:comment>
+    <sh:targetClass rdf:resource="http://example.org/flood#AtRiskArea"/>
+    <sh:rule>
+      <sh:TripleRule>
+        <rdf:type rdf:resource="http://www.w3.org/ns/shacl#TripleRule"/>
+        <sh:condition>
+          <sh:NodeShape>
+            <sh:sparql>
+              <![CDATA[
+                PREFIX ex: <http://example.org/flood#>
+                SELECT $this
+                WHERE {
+                  $this ex:hasFactor ?f1 .
+                  $this ex:hasFactor ?f2 .
+                  ?f1 a ex:SteepSlope .
+                  ?f2 a ex:BurnArea .
+                }
+              ]]>
+            </sh:sparql>
+          </sh:NodeShape>
+        </sh:condition>
+        <sh:subject rdf:resource="sh:this"/>
+        <sh:predicate rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#type"/>
+        <sh:object rdf:resource="http://example.org/flood#HighFlashFloodRiskArea"/>
+      </sh:TripleRule>
+    </sh:rule>
+  </sh:NodeShape>
+
+  <!-- 
+      EXAMPLE INDIVIDUALS
+  -->
+  <!-- 1) A FloodEvent with time-based properties -->
+  <rdf:Description rdf:about="http://example.org/flood#Event_2027_FlashFlood">
+    <rdf:type rdf:resource="http://example.org/flood#FloodEvent"/>
+    <rdf:type rdf:resource="http://example.org/flood#FlashFlood"/>
+    <rdfs:comment>A flash flood event in 2027 with predicted vs. observed durations for peak flow and warnings.</rdfs:comment>
+    <ex:timeToPeakFlowPredicted rdf:datatype="http://www.w3.org/2001/XMLSchema#duration">P0DT6H</ex:timeToPeakFlowPredicted>
+    <ex:timeToPeakFlowObserved rdf:datatype="http://www.w3.org/2001/XMLSchema#duration">P0DT5H</ex:timeToPeakFlowObserved>
+    <ex:timeLagPredicted rdf:datatype="http://www.w3.org/2001/XMLSchema#duration">P0DT3H</ex:timeLagPredicted>
+    <ex:timeLagObserved rdf:datatype="http://www.w3.org/2001/XMLSchema#duration">P0DT2H</ex:timeLagObserved>
+    <ex:timeToFloodWarningPredicted rdf:datatype="http://www.w3.org/2001/XMLSchema#duration">P0DT4H</ex:timeToFloodWarningPredicted>
+    <ex:timeToFloodWarningObserved rdf:datatype="http://www.w3.org/2001/XMLSchema#duration">P0DT5H</ex:timeToFloodWarningObserved>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://example.org/flood#Interval_2027FlashFlood">
+    <rdf:type rdf:resource="http://www.w3.org/2006/time#Interval"/>
+    <rdfs:comment>Represents the start and end timeframe for the 2027 flash flood.</rdfs:comment>
+    <time:hasBeginning rdf:resource="http://example.org/flood#Instant_FlashFloodStart_2027"/>
+    <time:hasEnd rdf:resource="http://example.org/flood#Instant_FlashFloodEnd_2027"/>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://example.org/flood#Instant_FlashFloodStart_2027">
+    <rdf:type rdf:resource="http://www.w3.org/2006/time#Instant"/>
+    <rdfs:comment>The recorded onset time of the 2027 FlashFlood.</rdfs:comment>
+    <time:inXSDDateTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2027-07-08T10:00:00Z</time:inXSDDateTime>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://example.org/flood#Instant_FlashFloodEnd_2027">
+    <rdf:type rdf:resource="http://www.w3.org/2006/time#Instant"/>
+    <rdfs:comment>The recorded end time of the 2027 FlashFlood.</rdfs:comment>
+    <time:inXSDDateTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2027-07-08T15:00:00Z</time:inXSDDateTime>
+  </rdf:Description>
+
+  <!-- Link the FloodEvent to the time interval -->
+  <rdf:Description rdf:about="http://example.org/flood#Event_2027_FlashFlood">
+    <ex:hasTimeInterval rdf:resource="http://example.org/flood#Interval_2027FlashFlood"/>
+  </rdf:Description>
+
+  <!-- 2) An AtRiskArea with multiple factors => triggers SHACL rule -->
+  <rdf:Description rdf:about="http://example.org/flood#MountainBurnedArea123">
+    <rdf:type rdf:resource="http://example.org/flood#MountainSteepHills"/>
+    <rdf:type rdf:resource="http://example.org/flood#AtRiskArea"/>
+    <rdfs:comment>Mountainous area recently burned; meets conditions for HighFlashFloodRiskArea inference via SHACL.</rdfs:comment>
+    <ex:hasFactor rdf:resource="http://example.org/flood#Factor_SteepSlope123"/>
+    <ex:hasFactor rdf:resource="http://example.org/flood#Factor_BurnArea123"/>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://example.org/flood#Factor_SteepSlope123">
+    <rdf:type rdf:resource="http://example.org/flood#SteepSlope"/>
+    <rdfs:comment>A steep slope factor raising runoff potential.</rdfs:comment>
+    <ex:slopeDegree rdf:datatype="http://www.w3.org/2001/XMLSchema#float">35</ex:slopeDegree>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://example.org/flood#Factor_BurnArea123">
+    <rdf:type rdf:resource="http://example.org/flood#BurnArea"/>
+    <rdfs:comment>Freshly burned region lacking vegetation, greatly increasing flood risk.</rdfs:comment>
+  </rdf:Description>
+
+  <!-- 3) HazardMap referencing external GIS -->
+  <rdf:Description rdf:about="http://example.org/flood#MountainBurnedArea123">
+    <ex:hasHazardMap rdf:resource="http://example.org/flood#HazardMap_MountainRegion"/>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://example.org/flood#HazardMap_MountainRegion">
+    <rdf:type rdf:resource="http://example.org/flood#HazardMap"/>
+    <rdfs:comment>A WMS-based GIS layer describing flood hazard polygons for the mountain-burned region.</rdfs:comment>
+    <ex:dataSource rdf:datatype="http://www.w3.org/2001/XMLSchema#anyURI">https://example.org/wms/mountain_burned_area_floodrisk</ex:dataSource>
+  </rdf:Description>
+
+  <!-- 4) Indicator Examples -->
+  <rdf:Description rdf:about="http://example.org/flood#NDWI_20230615_RegionX">
+    <rdf:type rdf:resource="http://example.org/flood#SpectralIndex"/>
+    <rdfs:comment>An NDWI indicator computed for RegionX on 2023-06-15, suggesting VeryWetSoil factor.</rdfs:comment>
+    <ex:indicatorValue rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0.34</ex:indicatorValue>
+    <ex:computedFromBands rdf:datatype="http://www.w3.org/2001/XMLSchema#string">Green,NIR</ex:computedFromBands>
+    <ex:computationDate rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2023-06-15T07:00:00Z</ex:computationDate>
+    <ex:confidenceLevel rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0.9</ex:confidenceLevel>
+    <ex:isIndicatorOf rdf:resource="http://example.org/flood#VeryWetSoil"/>
+  </rdf:Description>
+
+  <rdf:Description rdf:about="http://example.org/flood#SARBackscatter2022_RegionY">
+    <rdf:type rdf:resource="http://example.org/flood#Indicator"/>
+    <rdfs:comment>High SAR backscatter indicating possible flooding or saturated soil in RegionY, Dec 2022.</rdfs:comment>
+    <ex:indicatorValue rdf:datatype="http://www.w3.org/2001/XMLSchema#float">12.5</ex:indicatorValue>
+    <ex:computationDate rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2022-12-10T10:00:00Z</ex:computationDate>
+    <ex:confidenceLevel rdf:datatype="http://www.w3.org/2001/XMLSchema#float">0.8</ex:confidenceLevel>
+    <ex:isIndicatorOf rdf:resource="http://example.org/flood#VeryWetSoil"/>
+  </rdf:Description>
+
+</rdf:RDF>
