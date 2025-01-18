@@ -1,1 +1,30 @@
+# Core requirements for OntoViT-GRU project
+torch==2.0.1
+torchvision==0.15.2
 
+# Hugging Face Transformers for pretrained models (if needed)
+transformers==4.30.2
+
+# timm for Vision Transformer utilities
+timm==0.9.2
+
+# Basic data processing
+numpy==1.24.3
+pandas==2.0.3
+Pillow==9.5.0
+
+# RDF or graph-based embeddings requirements
+rdflib==6.2.0
+# or: python-louvain, networkx, etc.
+
+# Geometry / GIS operations (dealing with polygons)
+shapely==2.0.1
+
+# Handle some HPC or GPU scheduling logic
+# (This might not be necessary, only if using specific HPC frameworks are used)
+# Just an example, not required:
+# accelerate==0.19.0
+
+# Additional helpful libraries
+einops==0.6.1   # for rearranging multi-dimensional tensors
+loguru==0.7.0   # optional advanced logging 
