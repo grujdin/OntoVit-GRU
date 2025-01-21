@@ -1,0 +1,208 @@
+# ------------------------------------------------------------------------------
+# This code is a FastAPI application that dynamically registers APIs and
+# then calls them. It also handles different authentication methods, parses
+# and transforms request parameters, and stores the responses in a database
+# using SQLAlchemy and Pandas.
+#
+# Workflow:
+# 1. Register an API: A client sends a configuration (`APIConfig`) to the
+#    `/register_api/` endpoint, defining how the dynamic API should behave
+#    (endpoint, parameters, authentication, response format, etc.).
+# 2. Call the dynamic API: Once registered, a client can call `/{api_name}/`
+#    (using the HTTP method specified in the configuration), and the application
+#    will dynamically:
+#    - Apply authentication and headers
+#    - Pass along query/body/header/path parameters
+#    - Call the external API
+#    - Parse the response (JSON, CSV, XML, text)
+#    - Store the parsed response in the database table
+#    - Return the data back to the caller
+# @ Ion Grujdin, CEO SpaceTech, Universitatea Nationala de Stiinta si Tehnologie POLITEHNICA Bucuresti, 2024
+# ------------------------------------------------------------------------------
+
+from fastapi import FastAPI, HTTPException, Request
+import requests
+import pandas as pd
+from sqlalchemy import Table, Column, Integer, String, Float, Boolean
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import inspect
+from io import StringIO
+
+# 6. In-Memory Registry
+# - Holds registered APIs in a dictionary keyed by API name.
+# - In production, replace with persistent storage.
+
+registered_apis = {}
+
+# 7. Import Shared Modules
+#    - We'll import the database objects, models, and helper functions
+#      from ModularFastApi.py
+
+from ModularFastApi import (
+    engine,
+    metadata,
+    APIConfig,
+    ParameterConfig,
+    AuthenticationConfig,
+    handle_authentication,
+    convert_data_type,
+    parse_xml
+)
+
+# Create the FastAPI application
+app = FastAPI()
+
+# 7. API Registration Endpoint
+# When a new API config is sent to /register_api/:
+#  - Builds SQLAlchemy table definition (column types, etc.).
+#  - Creates or updates the table in the database (metadata.create_all).
+#  - Stores the API config in memory (registered_apis).
+@app.post("/register_api/")
+def register_api(config: APIConfig):
+    # Define table schema based on provided storage_columns
+    columns = [Column("id", Integer, primary_key=True, autoincrement=True)]
+    for field, field_type in config.storage_columns.items():
+        if field_type == "Float":
+            columns.append(Column(field, Float))
+        elif field_type == "String":
+            columns.append(Column(field, String))
+        elif field_type == "Boolean":
+            columns.append(Column(field, Boolean))
+        elif field_type == "Integer":
+            columns.append(Column(field, Integer))
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported column type: {field_type} for field: {field}")
+
+    # Create (or attach to) table in the database
+    Table(config.storage_table, metadata, *columns, extend_existing=True)
+    metadata.create_all(engine)
+
+    # Register API in memory
+    registered_apis[config.name] = config
+
+    return {"message": f"API '{config.name}' registered successfully"}
+
+
+# 8. Dynamic API Caller Endpoint
+# - Handles all methods (GET, POST, PUT, etc.) via @app.api_route(..., methods=[...]).
+# - Looks up config in registered_apis, then:
+#   1. Prepares request (headers, params, path/body/query).
+#   2. Authenticates with handle_authentication.
+#   3. Calls external API with requests.
+#   4. Parses response (JSON, CSV, XML, text).
+#   5. Renames/maps columns, ensures missing columns are present.
+#   6. Stores the result in the configured database table.
+#   7. Returns the data as JSON.
+@app.api_route("/{api_name}/", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
+async def call_registered_api(api_name: str, request: Request):
+    config: APIConfig = registered_apis.get(api_name)
+    if not config:
+        raise HTTPException(status_code=404, detail=f"API '{api_name}' not found")
+
+    method = config.method.upper()
+    url = config.endpoint
+    headers = config.headers.copy()
+    params = {}
+    body_params = {}
+
+    # Handle authentication
+    auth_headers, auth_params = handle_authentication(config.authentication)
+    headers.update(auth_headers)
+    params.update(auth_params)
+
+    # Read incoming request parameters
+    request_params = {}
+    if method in {'GET', 'DELETE', 'HEAD', 'OPTIONS'}:
+        request_params = dict(request.query_params)
+    elif method in {'POST', 'PUT', 'PATCH'}:
+        content_type = request.headers.get('content-type', '')
+        if 'application/json' in content_type:
+            request_params = await request.json()
+        elif 'multipart/form-data' in content_type or 'application/x-www-form-urlencoded' in content_type:
+            form_data = await request.form()
+            request_params = dict(form_data)
+        else:
+            request_params = {}
+
+    # Build path, query, header, body parameters
+    path_params = {}
+    query_params = {}
+    header_params = {}
+    for param in config.params:
+        param_name = param.name
+        param_in = param.in_
+        param_value = request_params.get(param_name, param.default)
+
+        if param.required and param_value is None:
+            raise HTTPException(status_code=400, detail=f"Missing required parameter: {param_name}")
+
+        if param_value is not None:
+            # Convert data type
+            param_value = convert_data_type(param_value, param)
+            if param_in == 'path':
+                path_params[param_name] = param_value
+            elif param_in == 'query':
+                query_params[param_name] = param_value
+            elif param_in == 'header':
+                header_params[param_name] = param_value
+            elif param_in == 'body':
+                body_params[param_name] = param_value
+
+    # Replace path parameters in URL
+    try:
+        url = url.format(**path_params)
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Missing path parameter: {e}")
+
+    # Finalize headers and query params
+    headers.update(header_params)
+    params.update(query_params)
+
+    # Make the external API request
+    try:
+        response = requests.request(
+            method=method,
+            url=url,
+            headers=headers,
+            params=params,
+            json=body_params if body_params else None
+        )
+        response.raise_for_status()
+
+        # Parse response
+        if config.response_format == 'json':
+            response_data = response.json()
+            data = pd.json_normalize(response_data)
+        elif config.response_format == 'csv':
+            data = pd.read_csv(StringIO(response.text))
+        elif config.response_format == 'xml':
+            data = parse_xml(response.text)
+        elif config.response_format == 'text':
+            data = pd.DataFrame([{'text': response.text}])
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported response format: {config.response_format}")
+
+        # Map fields to internal data model
+        data = data.rename(columns=config.data_map)
+
+        # Ensure data has all required columns
+        missing_columns = [col for col in config.storage_columns if col not in data.columns]
+        for col in missing_columns:
+            data[col] = None
+
+        # Store data in the database
+        data.to_sql(config.storage_table, engine, if_exists='append', index=False)
+
+        return {"status": "success", "data": data.to_dict(orient='records')}
+
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Error making external API request: {e}")
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# If you want to run this file directly:
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("FastApiApp:app", host="127.0.0.1", port=8000, reload=True)
