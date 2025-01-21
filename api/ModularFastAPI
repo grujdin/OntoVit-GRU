@@ -20,7 +20,6 @@
 # @ Ion Grujdin, CEO SpaceTech, Universitatea Nationala de Stiinta si Tehnologie POLITEHNICA Bucuresti, 2024
 # ------------------------------------------------------------------------------
 
-
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, Dict, List, Any
@@ -31,32 +30,35 @@ from sqlalchemy.exc import SQLAlchemyError
 from io import StringIO
 import base64
 
-# FastAPI Application and Database Setup
+# 1. FastAPI Application and Database Setup
 # - Creates the FastAPI app.
 # - Sets up the database connection using SQLAlchemy.
 # - Prepares a metadata object to manage and create tables.
 app = FastAPI()
 
-# Database and metadata setup
 DATABASE_URL = "sqlite:///./dynamic_apis.db"
 engine = create_engine(DATABASE_URL)
 metadata = MetaData()
 
-# In-Memory Registry
+# 2. In-Memory Registry
 # - Holds registered APIs in a dictionary keyed by API name.
-# - In production, this is replaced by a persistent storage.
+# - In production, this is replaced by persistent storage.
 registered_apis = {}
 
-# Parameter Configuration Pydantic Model
+
+# 3. Pydantic Models
+#    a. ParameterConfig
+#    b. AuthenticationConfig
+#    c. APIConfig
+
+# Parameter Configuration Model
 # Describes a single parameter for an API endpoint:
 #  - name: the parameter name.
-#  - in_ (alias 'in'): where the parameter is located (path, query, header, or body).
+#  - in_ (alias 'in'): where the parameter is located (path, query, header, body).
 #  - data_type: expected type (string, integer, float, boolean, enum).
-#  - required: whether this parameter is mandatory.
-#  - default: default value if not provided by the client.
-#  - enum_values: an optional list of valid values if data_type is enum.
-# Validators ensure in_ and data_type are valid.
-
+#  - required: whether the parameter is mandatory.
+#  - default: default value if not provided.
+#  - enum_values: optional list of valid values if data_type is enum.
 class ParameterConfig(BaseModel):
     name: str
     in_: str = Field(..., alias='in')
@@ -79,12 +81,11 @@ class ParameterConfig(BaseModel):
             raise ValueError("data_type must be one of 'string', 'integer', 'float', 'boolean', 'enum'")
         return value
 
-# Authentication Configuration Pydantic Model
-# Describes authentication settings for the dynamic API:
-#  - auth_type: type of authentication (none, api_key, oauth2, bearer_token, basic, or custom).
-#  - Depending on the auth_type, certain fields are required (e.g., api_key_name, api_key_value for api_key, or token for oauth2).
-# Validators ensure the auth_type is valid and that required fields (like token for oauth2) are present.
 
+# Authentication Configuration Model
+# Describes authentication settings for the dynamic API:
+#  - auth_type: type of authentication (none, api_key, oauth2, bearer_token, basic, custom).
+#  - Depending on auth_type, certain fields must be set (e.g., token for bearer_token).
 class AuthenticationConfig(BaseModel):
     auth_type: str  # 'none', 'api_key', 'oauth2', 'bearer_token', 'basic', 'custom'
 
@@ -129,31 +130,30 @@ class AuthenticationConfig(BaseModel):
                 raise ValueError(f"{field_name} is required for auth_type '{auth_type}'")
         return values
 
-# API Configuration Pydantic Model
-# Describes the entire configuration of a dynamic API:
-#  - name: identifier for the API (used as the path /{api_name}/).
-#  - endpoint: the external URL to call.
-#  - method: the HTTP method (GET, POST, etc.).
-#  - params: a list of ParameterConfig objects describing parameters.
-#  - headers: static headers to include in the request.
-#  - authentication: optional AuthenticationConfig.
-#  - response_format: format of the API response (json, csv, xml, or text).
-#  - data_map: how to map response fields to database internal column names.
-#  - storage_table: the database table name where responses will be stored.
-#  - storage_columns: maps column names to SQLAlchemy column types (e.g., Float, String, Boolean, Integer).
-# Validators in APIConfig ensure valid HTTP methods and valid response format strings.
 
+# API Configuration Model
+# Describes the entire configuration for a dynamic API:
+#  - name: identifier for the API (also used as /{api_name} path).
+#  - endpoint: external URL to call.
+#  - method: HTTP method (GET, POST, etc.).
+#  - params: list of ParameterConfig describing the input parameters.
+#  - headers: static headers.
+#  - authentication: optional AuthenticationConfig.
+#  - response_format: e.g., json, csv, xml, text.
+#  - data_map: how to rename fields from the response.
+#  - storage_table: DB table name to store data.
+#  - storage_columns: dict mapping field -> SQLAlchemy column type.
 class APIConfig(BaseModel):
     name: str
     endpoint: str
-    method: str  # 'GET', 'POST', 'PUT', 'DELETE', etc.
+    method: str  # 'GET', 'POST', etc.
     params: List[ParameterConfig] = []
     headers: Dict[str, str] = {}
     authentication: Optional[AuthenticationConfig] = None
-    response_format: str  # 'json', 'csv', 'xml', 'text'
-    data_map: Dict[str, str]  # Maps API response fields to internal model fields
-    storage_table: str  # Table to store data
-    storage_columns: Dict[str, str]  # Maps data fields to SQLAlchemy column types
+    response_format: str
+    data_map: Dict[str, str]
+    storage_table: str
+    storage_columns: Dict[str, str]
 
     @field_validator('method')
     @classmethod
@@ -169,19 +169,15 @@ class APIConfig(BaseModel):
             raise ValueError('response_format must be one of "json", "csv", "xml", "text"')
         return value
 
-# Function to handle authentication
-# Depending on auth_config.auth_type, this function prepares any extra headers or parameters needed for the request.
-# Examples:
-#  - api_key: places the key in either a header or query parameter.
-#  - bearer_token or oauth2: sets an Authorization header with Bearer <token>.
-#  - basic: sets an Authorization header with Basic <base64encoded>.
-#  - custom: merges custom headers.
-
+# 4. Authentication Handling
+# - Depending on the auth_type in AuthenticationConfig, adds headers/params
+#   such as API keys, Bearer tokens, Basic auth, or custom headers.
 def handle_authentication(auth_config: Optional[AuthenticationConfig]):
     headers = {}
     params = {}
     if not auth_config or auth_config.auth_type == 'none':
         return headers, params
+
     auth_type = auth_config.auth_type
     if auth_type == 'api_key':
         api_key_name = auth_config.api_key_name
@@ -206,12 +202,13 @@ def handle_authentication(auth_config: Optional[AuthenticationConfig]):
         headers.update(auth_config.custom_headers)
     else:
         raise HTTPException(status_code=400, detail=f"Unsupported auth_type: {auth_type}")
+
     return headers, params
 
-# Function to convert data types
-# Converts a request parameter value to the configured data type (string, integer, float, boolean, or enum).
-# Raises a 400 HTTPException if a value is invalid (e.g., providing a non-integer for an integer field).
 
+# 5. Parameter Conversion
+# - Converts request parameter values to the specified data type.
+# - Raises a 400 error if the conversion fails.
 def convert_data_type(value, param: ParameterConfig):
     if value is None:
         return value
@@ -234,176 +231,17 @@ def convert_data_type(value, param: ParameterConfig):
             else:
                 return bool(value)
         elif data_type == 'enum':
-            if param.enum_values and value in param.enum_values:
-                return value
-            else:
+            if param.enum_values and value not in param.enum_values:
                 raise ValueError(f"Invalid value for enum parameter '{param.name}': {value}")
+            return value
         else:
             return value
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# Function to parse XML responses (placeholder)
-# A simple placeholder function for XML parsing.
-# In production, the XML will be parsed into a dictionary or a DataFrame.
 
+# 6. XML Parsing (Placeholder)
+# - A minimal placeholder for XML parsing.
+# - In production, you'd parse and structure the XML into a DataFrame/dict.
 def parse_xml(xml_text):
-    # Implement XML parsing as needed
     return pd.DataFrame([{'xml_data': xml_text}])
-
-# API Registration Endpoint
-# When a new API config is sent to /register_api/:
-#  - Builds a SQLAlchemy table definition (column types, primary key, etc.).
-#  - Creates or updates (if already existing) the table in the database via metadata.create_all(engine).
-#  - Saves the APIConfig to registered_apis in memory.
-
-@app.post("/register_api/")
-def register_api(config: APIConfig):
-    # Define table schema based on provided storage_columns
-    columns = [Column("id", Integer, primary_key=True, autoincrement=True)]
-    for field, field_type in config.storage_columns.items():
-        if field_type == "Float":
-            columns.append(Column(field, Float))
-        elif field_type == "String":
-            columns.append(Column(field, String))
-        elif field_type == "Boolean":
-            columns.append(Column(field, Boolean))
-        elif field_type == "Integer":
-            columns.append(Column(field, Integer))
-        else:
-            raise HTTPException(status_code=400, detail=f"Unsupported column type: {field_type} for field: {field}")
-
-    # Create or attach to table
-    Table(config.storage_table, metadata, *columns, extend_existing=True)
-    metadata.create_all(engine)
-
-    # Register API in memory for demonstration (use persistent storage in practice)
-    registered_apis[config.name] = config
-    return {"message": f"API '{config.name}' registered successfully"}
-
-# Dynamic API Caller Endpoint
-# This single endpoint handles all HTTP methods and acts as the dynamic “router”:
-#  - Lookup the config for api_name in registered_apis.
-#  - Prepare the request:
-#     - Get the configured method, endpoint, static headers, etc.
-#     - Call handle_authentication to add any auth headers/params.
-#     - Read incoming request parameters (query or body) based on the method.
-#     - For each parameter in config.params, convert its value with convert_data_type and place it into path/query/header/body.
-#     - Format the URL if there are path parameters (e.g., url.format(**path_params)).
-#  - Make the external request using requests.request(...).
-#  - Parse the response according to response_format:
-#     - json -> response.json() -> pd.json_normalize(...)
-#     - csv -> pd.read_csv(...)
-#     - xml -> parse_xml(...)
-#     - text -> wrap in a simple DataFrame
-#  - Rename the columns based on data_map.
-#  - Add missing columns if the external data does not include everything required by storage_columns.
-#  - Store the data in the specified storage_table via data.to_sql(...).
-#  - Return the data to the caller in JSON format.
-
-@app.api_route("/{api_name}/", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
-async def call_registered_api(api_name: str, request: Request):
-    config: APIConfig = registered_apis.get(api_name)
-    if not config:
-        raise HTTPException(status_code=404, detail=f"API '{api_name}' not found")
-
-    method = config.method.upper()
-    url = config.endpoint
-    headers = config.headers.copy()
-    params = {}
-    body_params = {}
-
-    # Handle authentication
-    auth_headers, auth_params = handle_authentication(config.authentication)
-    headers.update(auth_headers)
-    params.update(auth_params)
-
-    # Get parameters from request
-    request_params = {}
-    if method in {'GET', 'DELETE', 'HEAD', 'OPTIONS'}:
-        request_params = dict(request.query_params)
-    elif method in {'POST', 'PUT', 'PATCH'}:
-        content_type = request.headers.get('content-type', '')
-        if 'application/json' in content_type:
-            request_params = await request.json()
-        elif 'multipart/form-data' in content_type or 'application/x-www-form-urlencoded' in content_type:
-            form_data = await request.form()
-            request_params = dict(form_data)
-        else:
-            request_params = {}
-    else:
-        request_params = {}
-
-    # Build path parameters, query parameters, headers, body parameters
-    path_params = {}
-    query_params = {}
-    header_params = {}
-    for param in config.params:
-        param_name = param.name
-        param_in = param.in_
-        param_value = request_params.get(param_name, param.default)
-        if param.required and param_value is None:
-            raise HTTPException(status_code=400, detail=f"Missing required parameter: {param_name}")
-        if param_value is not None:
-            # Convert data type
-            param_value = convert_data_type(param_value, param)
-            if param_in == 'path':
-                path_params[param_name] = param_value
-            elif param_in == 'query':
-                query_params[param_name] = param_value
-            elif param_in == 'header':
-                header_params[param_name] = param_value
-            elif param_in == 'body':
-                body_params[param_name] = param_value
-
-    # Replace path parameters in URL
-    try:
-        url = url.format(**path_params)
-    except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Missing path parameter: {e}")
-
-    # Update headers and params with dynamic parameters
-    headers.update(header_params)
-    params.update(query_params)
-
-    # Make the API request
-    try:
-        response = requests.request(
-            method,
-            url,
-            headers=headers,
-            params=params,
-            json=body_params if body_params else None
-        )
-        response.raise_for_status()
-
-        # Parse response based on specified format
-        if config.response_format == 'json':
-            response_data = response.json()
-            data = pd.json_normalize(response_data)
-        elif config.response_format == 'csv':
-            data = pd.read_csv(StringIO(response.text))
-        elif config.response_format == 'xml':
-            data = parse_xml(response.text)
-        elif config.response_format == 'text':
-            data = pd.DataFrame([{'text': response.text}])
-        else:
-            raise HTTPException(status_code=400, detail=f"Unsupported response format: {config.response_format}")
-
-        # Map fields to internal data model
-        data = data.rename(columns=config.data_map)
-        # Ensure data has required columns
-        missing_columns = [col for col in config.storage_columns.keys() if col not in data.columns]
-        if missing_columns:
-            for col in missing_columns:
-                data[col] = None  # Fill missing columns with None
-
-        # Store data into database
-        data.to_sql(config.storage_table, engine, if_exists='append', index=False)
-        return {"status": "success", "data": data.to_dict(orient='records')}
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"Error making external API request: {e}")
-    except SQLAlchemyError as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
