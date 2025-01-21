@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# This code is a FastAPI application that dynamically registers APIs and
+# This code is a FastApiApp application that dynamically registers APIs and
 # then calls them. It also handles different authentication methods, parses
 # and transforms request parameters, and stores the responses in a database
 # using SQLAlchemy and Pandas.
@@ -59,9 +59,13 @@ app = FastAPI()
 #  - Stores the API config in memory (registered_apis).
 @app.post("/register_api/")
 def register_api(config: APIConfig):
-    # Define table schema based on provided storage_columns
     columns = [Column("id", Integer, primary_key=True, autoincrement=True)]
+
     for field, field_type in config.storage_columns.items():
+        if field.lower() == "id":
+            # Skip if user tries to define 'id' again
+            continue
+
         if field_type == "Float":
             columns.append(Column(field, Float))
         elif field_type == "String":
@@ -71,15 +75,15 @@ def register_api(config: APIConfig):
         elif field_type == "Integer":
             columns.append(Column(field, Integer))
         else:
-            raise HTTPException(status_code=400, detail=f"Unsupported column type: {field_type} for field: {field}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported column type: {field_type} for field: {field}"
+            )
 
-    # Create (or attach to) table in the database
     Table(config.storage_table, metadata, *columns, extend_existing=True)
     metadata.create_all(engine)
 
-    # Register API in memory
     registered_apis[config.name] = config
-
     return {"message": f"API '{config.name}' registered successfully"}
 
 
@@ -205,4 +209,4 @@ async def call_registered_api(api_name: str, request: Request):
 # If you want to run this file directly:
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("FastApiApp:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("FastApiApp:app", host="127.0.0.1", port=8000, reload=True, log_level="debug")
