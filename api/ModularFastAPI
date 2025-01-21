@@ -1,22 +1,6 @@
 # ------------------------------------------------------------------------------
-# This code is a FastAPI application that dynamically registers APIs and
-# then calls them. It also handles different authentication methods, parses
-# and transforms request parameters, and stores the responses in a database
-# using SQLAlchemy and Pandas.
-#
-# Workflow:
-# 1. Register an API: A client sends a configuration (`APIConfig`) to the
-#    `/register_api/` endpoint, defining how the dynamic API should behave
-#    (endpoint, parameters, authentication, response format, etc.).
-# 2. Call the dynamic API: Once registered, a client can call `/{api_name}/`
-#    (using the HTTP method specified in the configuration), and the application
-#    will dynamically:
-#    - Apply authentication and headers
-#    - Pass along query/body/header/path parameters
-#    - Call the external API
-#    - Parse the response (JSON, CSV, XML, text)
-#    - Store the parsed response in the database table
-#    - Return the data back to the caller
+# This file provides the database setup, Pydantic models, and helper functions
+# (auth, parameter conversion, XML parsing) for a modular FastAPI application.
 # @ Ion Grujdin, CEO SpaceTech, Universitatea Nationala de Stiinta si Tehnologie POLITEHNICA Bucuresti, 2024
 # ------------------------------------------------------------------------------
 
